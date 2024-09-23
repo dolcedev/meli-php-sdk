@@ -477,7 +477,7 @@ class ItemsApi
         if (isset($_tempBody)) {
             // $_tempBody is the method argument, if present
             if ($headers['Content-Type'] === 'application/json') {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($_tempBody), true);
+                $httpBody = ObjectSerializer::sanitizeForSerialization($_tempBody);
             } else {
                 $httpBody = $_tempBody;
             }
@@ -540,7 +540,8 @@ class ItemsApi
                     logger()->error('Error connecting to the API', [
                         'statusCode' => $statusCode,
                         'url' => $url,
-                        'response' => $response->json()
+                        'response' => $response->json(),
+                        'body' => $httpBody
                     ]);
                     throw new ApiException(
                         sprintf(
