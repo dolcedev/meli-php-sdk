@@ -537,6 +537,11 @@ class ItemsApi
                     $statusCode = $response->getStatusCode();
 
                 if ($statusCode < 200 || $statusCode > 299) {
+                    logger()->error('Error connecting to the API', [
+                        'statusCode' => $statusCode,
+                        'url' => $url,
+                        'response' => $response->json()
+                    ]);
                     throw new ApiException(
                         sprintf(
                             '[%d] Error connecting to the API (%s)',
