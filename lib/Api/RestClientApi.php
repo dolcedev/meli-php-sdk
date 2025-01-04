@@ -889,7 +889,7 @@ class RestClientApi
         if (isset($_tempBody)) {
             // $_tempBody is the method argument, if present
             if ($headers['Content-Type'] === 'application/json') {
-                $httpBody = \GuzzleHttp\json_encode(ObjectSerializer::sanitizeForSerialization($_tempBody));
+                $httpBody = ObjectSerializer::sanitizeForSerialization($_tempBody);
             } else {
                 $httpBody = $_tempBody;
             }
