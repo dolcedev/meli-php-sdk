@@ -817,8 +817,219 @@ class RestClientApi
      */
     public function resourcePost($resource, $access_token, $body)
     {
-        list($response) = $this->resourcePostWithHttpInfo($resource, $access_token, $body);
+        // list($response) = $this->resourcePostWithHttpInfo($resource, $access_token, $body);
+        // return $response;
+
+         // verify the required parameter 'resource' is set
+         if ($resource === null || (is_array($resource) && count($resource) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $resource when calling resourcePost'
+            );
+        }
+        // verify the required parameter 'access_token' is set
+        if ($access_token === null || (is_array($access_token) && count($access_token) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $access_token when calling resourcePost'
+            );
+        }
+        // verify the required parameter 'body' is set
+        if ($body === null || (is_array($body) && count($body) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $body when calling resourcePost'
+            );
+        }
+
+        $resourcePath = '/{resource}';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        if ($access_token !== null) {
+            if('form' === 'form' && is_array($access_token)) {
+                foreach($access_token as $key => $value) {
+                    $queryParams[$key] = $value;
+                }
+            }
+            else {
+                $queryParams['access_token'] = $access_token;
+            }
+        }
+
+
+        // path params
+        if ($resource !== null) {
+            $resourcePath = str_replace(
+                '{' . 'resource' . '}',
+                ObjectSerializer::toPathValue($resource),
+                $resourcePath
+            );
+        }
+
+        // body params
+        $_tempBody = null;
+        if (isset($body)) {
+            $_tempBody = $body;
+        }
+
+        if ($multipart) {
+            $headers = $this->headerSelector->selectHeadersForMultipart(
+                ['application/json']
+            );
+        } else {
+            $headers = $this->headerSelector->selectHeaders(
+                ['application/json'],
+                ['application/json']
+            );
+        }
+
+        // for model (json/xml)
+        if (isset($_tempBody)) {
+            // $_tempBody is the method argument, if present
+            if ($headers['Content-Type'] === 'application/json') {
+                $httpBody = \GuzzleHttp\json_encode(ObjectSerializer::sanitizeForSerialization($_tempBody));
+            } else {
+                $httpBody = $_tempBody;
+            }
+        } elseif (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $multipartContents[] = [
+                        'name' => $formParamName,
+                        'contents' => $formParamValue
+                    ];
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif ($headers['Content-Type'] === 'application/json') {
+                // $httpBody = \GuzzleHttp\json_encode($formParams);
+                throw new \Exception('Error: No implementado en RestClient');
+
+            } else {
+                // for HTTP post (form)
+                // $httpBody = \GuzzleHttp\Psr7\build_query($formParams);
+                $httpBody = $formParams;
+            }
+        }
+
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $encode_url = $resourcePath;
+        $resourcePath = str_replace('%3F', '?', $resourcePath);
+        $resourcePath = str_replace('%3D', '=', $resourcePath);
+        $resourcePath = str_replace('%26', '&', $resourcePath);
+        $resourcePath = str_replace('%7B', '{', $resourcePath);
+        $resourcePath = str_replace('%7D', '}', $resourcePath);
+        $resourcePath = str_replace('%2C', ',', $resourcePath);
+        $already_querys = ($encode_url != $resourcePath) ? true : false;
+        $resourcePath = str_replace('%2F', '/', $resourcePath);
+
+        // $query = \GuzzleHttp\Psr7\build_query($queryParams);
+        // return new Request(
+        //     'POST',
+        //     $this->config->getHost() . $resourcePath . ($already_querys ? "&{$query}" : "?{$query}"),
+        //     $headers,
+        //     $httpBody
+        // );
+
+
+        try {
+            // $options = $this->createHttpClientOption();
+
+            try {
+                // $response = $this->client->send($request, $options);
+
+                $query = http_build_query($queryParams);
+                $url = $this->config->getHost() . $resourcePath . ($already_querys ? "&{$query}" : "?{$query}");
+
+                $response = Http::withHeaders($headers)
+                    ->post($url, $httpBody);
+
+
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        $url
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    $response->getBody()
+                );
+            }
+
+            $responseBody = $response->getBody();
+            switch($statusCode) {
+                case 200:
+                    if ('object' === '\SplFileObject') {
+                        $content = $responseBody; //stream goes to serializer
+                    } else {
+                        $content = (string) $responseBody;
+                    }
+
+                    list($response) = [
+                        ObjectSerializer::deserialize($content, 'object', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+            }
+
+            $returnType = 'object';
+            $responseBody = $response->getBody();
+            if ($returnType === '\SplFileObject') {
+                $content = $responseBody; //stream goes to serializer
+            } else {
+                $content = (string) $responseBody;
+            }
+
+            list($response) = [
+                ObjectSerializer::deserialize($content, $returnType, []),
+                $response->getStatusCode(),
+                $response->getHeaders()
+            ];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        'object',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+            }
+            throw $e;
+        }
+
         return $response;
+
     }
 
     /**
