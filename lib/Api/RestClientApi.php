@@ -998,6 +998,8 @@ class RestClientApi
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
+                
+                    return $response;
             }
 
             $returnType = 'object';
